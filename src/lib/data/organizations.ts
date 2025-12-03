@@ -1,40 +1,48 @@
+import { collection, doc, getDoc, getDocs, getCountFromServer } from "firebase/firestore";
+import { db } from "@/lib/firebase/config";
+
 export interface Organization {
     id: string;
     name: string;
     status: 'active' | 'inactive';
+    createdAt: string;
     users: number;
-    reports: number;
-    lastActive: string;
 }
 
-export const organizations: Organization[] = [
-    {
-        id: "1",
-        name: "Acme Corporation",
-        status: "active",
-        users: 150,
-        reports: 2500,
-        lastActive: "2024-01-15"
-    },
-    {
-        id: "2",
-        name: "Globex Corporation",
-        status: "active",
-        users: 120,
-        reports: 1800,
-        lastActive: "2024-01-14"
-    },
-    {
-        id: "3",
-        name: "Initech",
-        status: "inactive",
-        users: 80,
-        reports: 1200,
-        lastActive: "2023-12-20"
-    }
-];
+export const getOrganizations = async (): Promise<Organization[]> => {
+    const organizationsRef = collection(db, "organizations");
+    const snapshot = await getDocs(organizationsRef);
 
-export const getOrganizations = () => organizations;
-export const getOrganizationById = (id: string) => organizations.find(org => org.id === id);
-export const getActiveOrganizations = () => organizations.filter(org => org.status === 'active');
-export const getInactiveOrganizations = () => organizations.filter(org => org.status === 'inactive'); 
+    const results: Organization[] = [];
+    for (const org of snapshot.docs) {
+        const data = org.data();
+        const usersRef = collection(db, "organizations", org.id, "users");
+        const usersCountSnap = await getCountFromServer(usersRef);
+        const createdAt = data?.createdAt?.toDate?.()?.toISOString().slice(0, 10) ?? "No Date"; 
+        results.push({
+            id: org.id,
+            name: data?.name ?? "Unnamed",
+            status: (data?.status ?? "active") as 'active' | 'inactive',
+            users: usersCountSnap.data().count,
+            createdAt,
+        });
+    }
+    return results;
+};
+
+export const getOrganizationById = async (id: string): Promise<Organization | null> => {
+    const ref = doc(db, "organizations", id);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return null;
+    const data = snap.data();
+    const usersRef = collection(db, "organizations", id, "users");
+    const usersCountSnap = await getCountFromServer(usersRef);
+    const createdAt = data?.createdAt?.toDate?.() ? data.createdAt.toDate().toISOString().slice(0, 10) : undefined;
+    return {
+        id: snap.id,
+        name: data?.name ?? "Unnamed",
+        status: (data?.status ?? "active") as 'active' | 'inactive',
+        users: usersCountSnap.data().count,
+        createdAt,
+    };
+};

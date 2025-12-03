@@ -1,7 +1,16 @@
 import { OrganizationsTable } from "@/components/organizations/organizations-table";
 import { Card } from "@/components/ui/card";
+import { getOrganizations } from "@/lib/data/organizations";
 
-export default function OrganizationsPage() {
+export const metadata = {
+    title: "Organizations | Iris",
+    description: "Browse all organizations, users, and status.",
+};
+
+export const revalidate = 60;
+
+export default async function OrganizationsPage() {
+    const organizations = await getOrganizations();
     return (
         <div className="space-y-10">
             <div className="space-y-2">
@@ -10,8 +19,8 @@ export default function OrganizationsPage() {
             </div>
 
             <Card className="p-6">
-                <OrganizationsTable />
+                <OrganizationsTable organizations={organizations} />
             </Card>
         </div>
     );
-} 
+}

@@ -3,6 +3,7 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { getUsersByOrganizationId } from "@/lib/data/users";
 
 interface User {
     id: string;
@@ -21,34 +22,14 @@ export function OrganizationUsers({ organizationId }: { organizationId: string }
         const fetchUsers = async () => {
             setIsLoading(true);
             try {
-                // For now, using mock data
-                const mockUsers = [
-                    {
-                        id: "1",
-                        name: "John Doe",
-                        email: `john@org-${organizationId}.com`,
-                        role: "Admin",
-                        createdAt: "2024-01-20"
-                    },
-                    {
-                        id: "2",
-                        name: "Jane Smith",
-                        email: `jane@org-${organizationId}.com`,
-                        role: "User",
-                        createdAt: "2024-01-19"
-                    },
-                    {
-                        id: "3",
-                        name: "Bob Wilson",
-                        email: `bob@org-${organizationId}.com`,
-                        role: "User",
-                        createdAt: "2024-01-18"
-                    },
-                ];
-
-                // Simulate network delay
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                setUsers(mockUsers);
+                const data = await getUsersByOrganizationId(organizationId);
+                setUsers(data.map(u => ({
+                    id: u.id,
+                    name: u.name,
+                    email: u.email,
+                    role: u.role,
+                    createdAt: u.createdAt ?? "No Date",
+                })));
             } catch (error) {
                 console.error('Error fetching users:', error);
                 // You might want to show an error message to the user

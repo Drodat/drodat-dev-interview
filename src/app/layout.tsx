@@ -6,6 +6,15 @@ import { Toaster } from "sonner";
 
 const inter = Inter({ subsets: ["latin"] });
 
+export const metadata = {
+  title: {
+    default: "Dashboard | Iris",
+    template: "%s",
+  },
+  description: "Monitor organizations, users, and activity with Iris.",
+  metadataBase: new URL("http://localhost:3000"),
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{

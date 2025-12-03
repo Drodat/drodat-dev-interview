@@ -1,48 +1,81 @@
+import { collection, collectionGroup, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase/config";
+
 export interface User {
     id: string;
     name: string;
     email: string;
-    organization: string;
+    organizationId: string;
+    organizationName: string;
     role: string;
-    status: 'active' | 'inactive';
-    lastActive: string;
-    avatarUrl: string;
+    createdAt: string;
 }
 
-export const users: User[] = [
-    {
-        id: "1",
-        name: "John Smith",
-        email: "john.smith@acme.com",
-        organization: "Acme Corporation",
-        role: "Admin",
-        status: "active",
-        lastActive: "2024-01-15",
-        avatarUrl: "/avatars/john-smith.png"
-    },
-    {
-        id: "2",
-        name: "Sarah Johnson",
-        email: "sarah.j@globex.com",
-        organization: "Globex Corporation",
-        role: "User",
-        status: "active",
-        lastActive: "2024-01-14",
-        avatarUrl: "/avatars/sarah-johnson.png"
-    },
-    {
-        id: "3",
-        name: "Michael Brown",
-        email: "m.brown@initech.com",
-        organization: "Initech",
-        role: "User",
-        status: "inactive",
-        lastActive: "2023-12-20",
-        avatarUrl: "/avatars/michael-brown.png"
-    }
-];
+export const getUsersByOrganizationId = async (organizationId: string): Promise<User[]> => {
+    const usersRef = collection(db, "organizations", organizationId, "users");
+    const snapshot = await getDocs(usersRef);
+    return snapshot.docs.map((docSnap) => {
+        const data = docSnap.data();
+        const createdAt = data?.createdAt?.toDate?.()?.toISOString().slice(0, 10) ?? undefined;
+        return {
+            id: docSnap.id,
+            name: data?.name ?? "Unnamed",
+            email: data?.email ?? "",
+            role: data?.role ?? "User",
+            organizationId,
+            organizationName: data?.organizationName,
+            createdAt: createdAt ?? "No Date",  
+        } satisfies User;
+    });
+};
 
-export const getUsers = () => users;
-export const getUserById = (id: string) => users.find(user => user.id === id);
-export const getActiveUsers = () => users.filter(user => user.status === 'active');
-export const getInactiveUsers = () => users.filter(user => user.status === 'inactive'); 
+export const getUserById = async (userId: string): Promise<User | null> => {
+    const group = collectionGroup(db, "users");
+    const snapshot = await getDocs(group);
+    for (const docSnap of snapshot.docs) {
+        if (docSnap.id === userId) {
+            const data = docSnap.data();
+            const orgRef = docSnap.ref.parent.parent!;
+            const orgSnap = await getDoc(orgRef);
+            const createdAt = data?.createdAt?.toDate?.() ? data.createdAt.toDate().toISOString().slice(0, 10) : undefined;
+            return {
+                id: docSnap.id,
+                name: data?.name ?? "Unnamed",
+                email: data?.email ?? "",
+                role: data?.role ?? "User",
+                organizationId: orgRef.id,
+                organizationName: orgSnap.exists() ? (orgSnap.data())?.name : undefined,
+                createdAt,
+            };
+        }
+    }
+    return null;
+};
+
+export const updateUserById = async (userId: string, updates: Partial<Pick<User, 'name' | 'email' | 'role'>>): Promise<void> => {
+    const group = collectionGroup(db, "users");
+    const snapshot = await getDocs(group);
+    for (const docSnap of snapshot.docs) {
+        if (docSnap.id === userId) {
+            await updateDoc(docSnap.ref, updates);
+            return;
+        }
+    }
+};
+
+export const moveUserToOrganization = async (userId: string, newOrganizationId: string): Promise<void> => {
+    const group = collectionGroup(db, "users");
+    const snapshot = await getDocs(group);
+    for (const docSnap of snapshot.docs) {
+        if (docSnap.id === userId) {
+            const data = docSnap.data();
+            const newOrgRef = doc(db, "organizations", newOrganizationId);
+            const newOrgSnap = await getDoc(newOrgRef);
+            const newOrgName = newOrgSnap.exists() ? (newOrgSnap.data())?.name : undefined;
+            const newUserRef = doc(db, "organizations", newOrganizationId, "users", userId);
+            await setDoc(newUserRef, { ...data, organizationName: newOrgName });
+            await deleteDoc(docSnap.ref);
+            return;
+        }
+    }
+};
