@@ -5,8 +5,8 @@ import { Building2, Users, FileText } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { TooltipProps } from 'recharts';
 import { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent';
-import { getMonthlyReports, getUserGrowth } from '@/lib/data/dashboard';
-import { getTotalOrganizationsCount, getTotalUsersCount } from '@/lib/firebase/stats';
+import { getMonthlyReports } from '@/lib/data/dashboard';
+import { getTotalOrganizationsCount, getTotalUsersCount, getUserGrowthData } from '@/lib/firebase/stats';
 import { useEffect, useState } from "react";
 
 // Add this interface for our custom tooltip props
@@ -37,17 +37,20 @@ const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
 export function DashboardStats() {
     const [totalOrganizations, setTotalOrganizations] = useState<number>(0);
     const [totalUsers, setTotalUsers] = useState<number>(0);
+    const [userGrowthData, setUserGrowthData] = useState<{ month: string; users: number; }[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const [orgsCount, usersCount] = await Promise.all([
+                const [orgsCount, usersCount, growthData] = await Promise.all([
                     getTotalOrganizationsCount(),
-                    getTotalUsersCount()
+                    getTotalUsersCount(),
+                    getUserGrowthData()
                 ]);
                 setTotalOrganizations(orgsCount);
                 setTotalUsers(usersCount);
+                setUserGrowthData(growthData);
             } catch (error) {
                 console.error('Error fetching dashboard stats:', error);
             } finally {
@@ -58,7 +61,6 @@ export function DashboardStats() {
         fetchStats();
     }, []);
     const monthlyData = getMonthlyReports();
-    const userGrowthData = getUserGrowth();
     if (isLoading) {
         return (
             <div className="grid gap-4 md:grid-cols-3">
