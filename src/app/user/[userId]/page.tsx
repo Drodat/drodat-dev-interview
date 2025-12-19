@@ -4,13 +4,29 @@ import { UserProfile } from "@/components/organizations/user-profile";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { getUserById } from "@/lib/data/users";
 
-export default function UserPage({ params }: { params: { id: string } }) {
+export async function generateMetadata({ params }: { params: Promise<{ userId: string }> }) {
+    const { userId } = await params;
+    const user = await getUserById(userId);
+    if (!user) return { title: "User Not Found | Iris" };
+    return {
+        title: `${user.name} | Iris`,
+        description: `Profile details and activity for ${user.name}.`,
+    };
+}
+
+export const revalidate = 60;
+
+export default async function UserPage({ params }: { params: Promise<{ userId: string }> }) {
+    const { userId } = await params;
+    const user = await getUserById(userId);
+    const backHref = user ? `/organizations/${user.organizationId}` : "/organizations";
     return (
         <div className="space-y-10">
             <div className="space-y-2">
                 <div className="flex items-center gap-4">
-                    <Link href="/organizations">
+                    <Link href={backHref}>
                         <Button variant="ghost" size="icon" className="text-white/60 hover:text-white">
                             <ArrowLeft className="h-4 w-4" />
                         </Button>
@@ -34,7 +50,7 @@ export default function UserPage({ params }: { params: { id: string } }) {
 
                 <TabsContent value="profile">
                     <Card className="p-8">
-                        <UserProfile userId={params.id} />
+                        <UserProfile userId={userId} />
                     </Card>
                 </TabsContent>
             </Tabs>

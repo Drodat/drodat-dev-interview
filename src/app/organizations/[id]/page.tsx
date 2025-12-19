@@ -7,8 +7,23 @@ import Link from "next/link";
 import { getOrganizationById } from "@/lib/data/organizations";
 import { notFound } from "next/navigation";
 
-export default function OrganizationPage({ params }: { params: { id: string } }) {
-    const organization = getOrganizationById(params.id);
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
+    const organization = await getOrganizationById(id);
+    if (!organization) {
+        return { title: "Organization Not Found | Iris" };
+    }
+    return {
+        title: `${organization.name} | Iris`,
+        description: `Manage users and details for ${organization.name}.`,
+    };
+}
+
+export const revalidate = 60;
+
+export default async function OrganizationPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
+    const organization = await getOrganizationById(id);
 
     if (!organization) {
         notFound();
@@ -49,4 +64,4 @@ export default function OrganizationPage({ params }: { params: { id: string } })
             </Tabs>
         </div>
     );
-} 
+}

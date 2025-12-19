@@ -2,11 +2,17 @@
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { getOrganizations } from '@/lib/data/organizations';
 import { useRouter } from "next/navigation";
 
-export function OrganizationsTable() {
-    const organizations = getOrganizations();
+type OrgRow = {
+    id: string;
+    name: string;
+    status: 'active' | 'inactive';
+    users: number;
+    createdAt: string;
+};
+
+export function OrganizationsTable({ organizations }: { organizations: OrgRow[] }) {
     const router = useRouter();
 
     return (
@@ -37,11 +43,11 @@ export function OrganizationsTable() {
                                     {org.status}
                                 </Badge>
                             </TableCell>
-                            <TableCell className="text-white/60">{new Date(org.lastActive).toLocaleDateString()}</TableCell>
+                            <TableCell className="text-white/60">{org.createdAt ?? "No Date"}</TableCell>
                         </TableRow>
                     ))}
                 </TableBody>
             </Table>
         </div>
     );
-} 
+}
